@@ -353,8 +353,8 @@ class Ui_MainWindow(object):
         self.contadorImagenes = self.contadorImagenes + 1
         hora = time.strftime("%H:%M:%S")
         
-        self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s',  '%s', '%s')" % (self.contadorImagenes, matrizSensor2 , hora))
-        self.conn1.commit()
+        #self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s',  '%s', '%s')" % (self.contadorImagenes, matrizSensor2 , hora))
+        #self.conn1.commit()
 
         #rotate_imgMatriz1 = scipy.ndimage.rotate(matrizSensor1, 90)
         rotate_imgMatriz2 = scipy.ndimage.rotate(matrizSensor2, 180)
@@ -365,7 +365,8 @@ class Ui_MainWindow(object):
 
         matrizCompleta = np.concatenate((matriz2espejo, matriz2espejo), axis=1)
         for i in range(48):
-            for j in range(96):
+            for j in range(48):
+                matrizCompleta[i][j] = matrizCompleta[i][j]*10
                 if matrizCompleta[i][j] > 200:
                     matrizCompleta[i][j] = self.intensityAdjustment
 

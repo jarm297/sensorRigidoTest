@@ -125,20 +125,19 @@ class Ui_MainWindow(object):
                           
                             if len(self.vectorDatosDistribucionPresion) > 5:
 
-                                print(time.strftime("%H:%M:%S"), 'tamano buffer', 
-                                    self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 3],
-                                    self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 2],
-                                    self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 1])
+                                #print(time.strftime("%H:%M:%S"), 'tamano buffer', 
+                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 3],
+                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 2],
+                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 1])
 
                                 if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13:
                                     self.primerByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 5]
                                     self.segundoByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 4]
                                     self.numeroBytes = self.primerByte*255 + self.segundoByte
-                                    print(self.numeroBytes,'=',len(self.vectorDatosDistribucionPresion)-6)
+                                    
                                     if(self.numeroBytes == len(self.vectorDatosDistribucionPresion) - 6):
-
+                                        print(self.numeroBytes,'=',len(self.vectorDatosDistribucionPresion)-6)
                                         self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-6]
-
                                         self.vectorDatosDistribucionPresion.append(255)
                                         self.vectorDesencriptado = self.desencriptarVector(self.vectorDatosDistribucionPresion)
                                         self.dibujarDistribucionPresion(self.vectorDesencriptado)
