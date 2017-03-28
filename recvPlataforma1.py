@@ -110,37 +110,44 @@ class Ui_MainWindow(object):
                     print('cierra conexion')
     
             if self.sensorConnectionStatus == True:
-                self.s.write(bytes('*','UTF-8'))
+                
                 buf = self.s.readline()
 
                 if len(buf) > 5:
                     
                     info = [buf[i:i+1] for i in range(0, len(buf), 1)]
-                    #try:
+
                     for i in info:
                         valorDecimal = int(binascii.hexlify(i),16)
                         
-                        if self.iniciaTramaDeDatos == False:
-                            self.vectorDatosDistribucionPresion.append(valorDecimal)
-                          
-                            if len(self.vectorDatosDistribucionPresion) > 5:
-
-                                #print(time.strftime("%H:%M:%S"), 'tamano buffer', 
-                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 3],
-                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 2],
-                                    #self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 1])
-
-                                if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13:
                         self.vectorDatosDistribucionPresion.append(valorDecimal)
                       
                         if len(self.vectorDatosDistribucionPresion) > 7:
 
                             #protocolo: trama de datos + numero de datos en 2 bytes + 13 (retorno de carro CR) + 10 (Nueva linea LF)
                             if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10 :
+                                
                                 self.primerByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 5]
                                 self.segundoByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 4]
                                 self.numeroBytes = self.primerByte*255 + self.segundoByte
                                 
+                                print(len(self.vectorDatosDistribucionPresion)-5, self.numeroBytes)
+                                if (len(self.vectorDatosDistribucionPresion)-5 != self.numeroBytes):
+                                    print('no iguales')
+
+                                self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-6]
+                                self.vectorDatosDistribucionPresion.append(255)
+                                self.vectorDesencriptado = self.desencriptarVector(self.vectorDatosDistribucionPresion)
+                                self.dibujarDistribucionPresion(self.vectorDesencriptado)
+
+                                self.vectorDatosDistribucionPresion = []
+                                info = []
+                                self.s.write(bytes('*','UTF-8'))
+                                time.sleep(0.01)
+                                    #self.iniciaTramaDeDatos = False
+                                
+
+
                 #if self.connectionRequest == True:
                     #self.socketConnection()
                 #print("sensor desconectado")
