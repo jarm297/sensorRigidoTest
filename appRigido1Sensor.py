@@ -15,18 +15,15 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 import socket
-import sys
+import sys, struct
 import binascii
 import threading
 import numpy as np
-import socket
 import scipy.ndimage
-import sys, struct
 from pylab import *
 import time
 import sqlite3
 import ast
-import time
 ion()
 
 maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
@@ -258,12 +255,12 @@ class Ui_MainWindow(object):
         self.graphicsView_2.setBackgroundBrush(brush)
         self.graphicsView_2.setObjectName("graphicsView_2")
 
-        self.label = QtWidgets.QLabel(self.centralWidget)
-        self.label.setGeometry(QtCore.QRect(760, 18, 270, 61))
-        self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap("/img/logoGIBIC.png"))
-        self.label.setScaledContents(True)
-        self.label.setObjectName("label")
+        self.icon_label = QtWidgets.QLabel(self.centralWidget)
+        self.icon_label.setGeometry(QtCore.QRect(760, 18, 270, 61))
+        self.icon_label.setText("")
+        self.icon_label.setPixmap(QtGui.QPixmap("logoGIBIC.png"))
+        self.icon_label.setScaledContents(True)
+        self.icon_label.setObjectName("icon_label")
 
         self.label_1 = QtWidgets.QLabel(self.centralWidget)
         self.label_1.setGeometry(QtCore.QRect(425, 10, 311, 71))
