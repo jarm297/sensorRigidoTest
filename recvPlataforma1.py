@@ -39,6 +39,8 @@ class Ui_MainWindow(object):
     def socketConnection(self):
         
         self.s = serial.Serial('/dev/tty.usbmodem1411')
+        self.s.timeout = 0.2
+        self.s.bauderate = 115200
         #Sensor 2
         self.campoSensor1Creado = False
         self.connectionRequest = False
@@ -83,7 +85,7 @@ class Ui_MainWindow(object):
                         if col == self.columnas:
                             col = 0;
                             fil = fil + 1;
-                            if fil > self.filas:
+                            if fil >= self.filas:
                                 return matriz;
                             matriz[fil][col] = 0;
                         col = col + 1;
@@ -108,11 +110,10 @@ class Ui_MainWindow(object):
                     self.connectionRequest = False
 
                     print('cierra conexion')
-    
-            if self.sensorConnectionStatus == True:
-                
-                buf = self.s.readline()
-
+            self.sensorConnectionStatus = True
+            if self.sensorConnectionStatus == True:                
+                buf = self.readline(self.s, b'\r\n')
+                #buf = self.s.readline()
                 if len(buf) > 5:
                     
                     info = [buf[i:i+1] for i in range(0, len(buf), 1)]
@@ -125,33 +126,47 @@ class Ui_MainWindow(object):
                         if len(self.vectorDatosDistribucionPresion) > 7:
 
                             #protocolo: trama de datos + numero de datos en 2 bytes + 13 (retorno de carro CR) + 10 (Nueva linea LF)
-                            if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10 :
+                            if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10:
                                 
                                 self.primerByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 5]
                                 self.segundoByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 4]
                                 self.numeroBytes = self.primerByte*255 + self.segundoByte
                                 
-                                print(len(self.vectorDatosDistribucionPresion)-5, self.numeroBytes)
+                                #print(len(self.vectorDatosDistribucionPresion)-5, self.numeroBytes)
                                 if (len(self.vectorDatosDistribucionPresion)-5 != self.numeroBytes):
-                                    print('no iguales')
-
+                                    print("diferentes!!!!!!")
+                                    print(buf)
+                                else:
+                                    #pass
+                                    print(buf)
                                 self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-6]
                                 self.vectorDatosDistribucionPresion.append(255)
+                                
                                 self.vectorDesencriptado = self.desencriptarVector(self.vectorDatosDistribucionPresion)
                                 self.dibujarDistribucionPresion(self.vectorDesencriptado)
-
                                 self.vectorDatosDistribucionPresion = []
                                 info = []
+
+                                #self.iniciaTramaDeDatos = False
                                 self.s.write(bytes('*','UTF-8'))
-                                time.sleep(0.01)
-                                    #self.iniciaTramaDeDatos = False
-                                
+                                time.sleep(0.01) 
 
 
                 #if self.connectionRequest == True:
                     #self.socketConnection()
                 #print("sensor desconectado")
-            
+    def readline(self, a_serial, eol=b'\r\n'):
+        leneol = len(eol)
+        line = bytearray()
+        while True:
+            c = a_serial.readline()
+            if c:
+                line += c
+                if line[-leneol:] == eol:
+                    break
+            else:
+                break
+        return bytes(line)             
         
     def dibujarDistribucionPresion(self, matrizDistribucion):
 ##
@@ -169,7 +184,7 @@ class Ui_MainWindow(object):
 
       
       data = scipy.ndimage.zoom(matrizDistribucion, 1)
-      print("inserta datos base de datos")
+      #print("inserta datos base de datos")
       #self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', `connectionStatus` = '%s' WHERE `id`='1'" % (matrizDistribucion,'True'))
       self.c.execute("UPDATE `sensorRigido` SET `data`= '%s' WHERE `id`='1'" % matrizDistribucion)
       self.conn.commit()
