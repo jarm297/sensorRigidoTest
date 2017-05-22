@@ -20,6 +20,10 @@ import time
 import sqlite3
 #ion()
 
+
+puerto = sys.argv[1]
+plataformaID = sys.argv[2]
+print("puerto",puerto)
 maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
 sys.setrecursionlimit(maxint)
 
@@ -38,7 +42,7 @@ class Ui_MainWindow(object):
         
     def socketConnection(self):
         
-        self.s = serial.Serial('/dev/tty.usbmodem15')
+        self.s = serial.Serial(puerto)
         self.s.timeout = 0.2
         self.s.bauderate = 115200
         #Sensor 2
@@ -57,14 +61,14 @@ class Ui_MainWindow(object):
         self.c.execute('''CREATE TABLE IF NOT EXISTS sensorRigido
                      (id text, data real, connectionStatus text)''')
         # Insert a row of data
-        for row in self.c.execute("SELECT * FROM sensorRigido WHERE 1"):
-            if row[0] == '1':
+        for row in self.c.execute("SELECT * FROM sensorRigido WHERE '%s'" % plataformaID):
+            if row[0] == plataformaID:
                 self.campoSensor1Creado = True
 
         if self.campoSensor1Creado == False:
             self.campoSensor1Creado = True
-            self.c.execute("INSERT INTO sensorRigido VALUES ('1','initValue sensor 1','True')")
-        self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
+            self.c.execute("INSERT INTO sensorRigido VALUES ('%s','initValue sensor 1','True')" % plataformaID)
+        self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='%s'" % ('True',plataformaID))
         self.conn.commit()
         
     def desencriptarVector(self,vector):
@@ -102,7 +106,7 @@ class Ui_MainWindow(object):
     def recibeDatos(self):
 
         while True:
-            for row in self.c.execute("SELECT * FROM sensorRigido WHERE `id`='1'"):
+            for row in self.c.execute("SELECT * FROM sensorRigido WHERE `id`='%s'" % plataformaID):
                 if row[2] == 'True':
                     self.connectionRequest = True
                 else:
@@ -188,7 +192,7 @@ class Ui_MainWindow(object):
       data = scipy.ndimage.zoom(matrizDistribucion, 1)
       #print("inserta datos base de datos")
       #self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', `connectionStatus` = '%s' WHERE `id`='1'" % (matrizDistribucion,'True'))
-      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s' WHERE `id`='1'" % matrizDistribucion)
+      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s' WHERE `id`='%s'" % (matrizDistribucion, plataformaID))
       self.conn.commit()
 
     def conectarSensor(self):
