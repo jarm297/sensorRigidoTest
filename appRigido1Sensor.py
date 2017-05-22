@@ -24,6 +24,7 @@ from pylab import *
 import time
 import sqlite3
 import ast
+#import recvPlataforma1
 ion()
 
 maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
@@ -79,6 +80,11 @@ class Ui_MainWindow(object):
         self.intensityAdjustment = 240
 
         self.contadorImagenes = 0
+        #self.instanciaSerial = recvPlataforma1.Ui_MainWindow()
+        #self.t = threading.Thread(target=self.instanciaSerial.conectarSensor)
+        #self.t.IsBackground = True;
+        #self.threadStarted = False
+        
         #plt.gca().invert_yaxis()
             
     def sqlDataBase(self):
@@ -376,7 +382,8 @@ class Ui_MainWindow(object):
         elif self.numberOfPlatforms == 3:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
-        print("plot matriz")
+
+        #plt.savefig('/Users/FING156561/Desktop/figuraRigido.png', dpi=10)
       
     def conectarSensor(self):
 ##        try:
@@ -386,8 +393,8 @@ class Ui_MainWindow(object):
 
             try:
                 
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'True')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'True')
 
                 self.pushButton.setStyleSheet("background-color: green; border-style: outset; border-width: 1px; border-radius: 10px; border-color: beige; padding: 6px;")
 
@@ -400,11 +407,13 @@ class Ui_MainWindow(object):
             self.conn.commit()
 
             self.msg.exec_()
-
+            #if (self.threadStarted == False):
+                #self.threadStarted = True
+                #self.t.start()
         else:
             try:
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'False')
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'False')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'False')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'False')
 
                 self.sensorConectado = False
                 self.pushButton.setStyleSheet("background-color: red; border-style: outset; border-width: 1px; border-radius: 10px; border-color: beige; padding: 6px;")
@@ -412,7 +421,9 @@ class Ui_MainWindow(object):
             except:
                 pass    
             self.conn.commit()
+            self.instanciaSerial.stopCommunicacion()
             print("sensor desconectado")
+        
         threading.Timer(0.01, self.recibeDatos).start()              
 
 if __name__ == "__main__":

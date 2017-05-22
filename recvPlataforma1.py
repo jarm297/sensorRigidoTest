@@ -38,7 +38,7 @@ class Ui_MainWindow(object):
         
     def socketConnection(self):
         
-        self.s = serial.Serial('/dev/tty.usbmodem1411')
+        self.s = serial.Serial('/dev/tty.usbmodem15')
         self.s.timeout = 0.2
         self.s.bauderate = 115200
         #Sensor 2
@@ -110,10 +110,12 @@ class Ui_MainWindow(object):
                     self.connectionRequest = False
 
                     print('cierra conexion')
-            self.sensorConnectionStatus = True
+
+            
             if self.sensorConnectionStatus == True:                
                 buf = self.readline(self.s, b'\r\n')
                 #buf = self.s.readline()
+                print(buf)
                 if len(buf) > 5:
                     
                     info = [buf[i:i+1] for i in range(0, len(buf), 1)]
@@ -174,7 +176,7 @@ class Ui_MainWindow(object):
       
       for i in range(self.filas):
         for j in range(self.columnas):
-            matrizDistribucion[i][j] = matrizDistribucion[i][j]*1.5
+            matrizDistribucion[i][j] = matrizDistribucion[i][j]*3
 
             if matrizDistribucion[i][j] > 200:
                 #matrizDistribucion[i][j] = 240
@@ -191,12 +193,21 @@ class Ui_MainWindow(object):
 
     def conectarSensor(self):
         #try:
+            self.sensorConnectionStatus = True
             self.socketConnection()
             self.recibeDatos()
             #threading.Timer(0.01, self.recibeDatos()).start()
             print("conecta conecta")
         #except:
             #print("No conecta")
+
+    def stopCommunicacion(self):
+        pass
+        #self.sensorConnectionStatus = False
+
+    def startCommunicacion(self):
+        pass
+        #self.sensorConnectionStatus = True
 
 if __name__ == "__main__":
     import sys
