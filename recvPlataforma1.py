@@ -7,7 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 
-import socket
+import serial
 import sys
 import binascii
 import threading
@@ -19,7 +19,13 @@ import sys, struct
 import time
 import sqlite3
 #ion()
+import COP
+import ast
 
+#puerto = sys.argv[1]
+puerto = 'COM3'
+plataformaID = 1#sys.argv[2]
+print("puerto",puerto)
 maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
 sys.setrecursionlimit(maxint)
 
@@ -31,6 +37,8 @@ class Ui_MainWindow(object):
         self.iniciaTramaDeDatos = False
         self.columnas = 48;
         self.filas = 48;
+        self.old = [0,0,0]
+        self.COP = [0,0,0]
         matriz = [[0 for x in range(self.columnas)] for x in range(self.filas)] 
         matriz[0][0] = 255
         self.sensorConnectionStatus = False
@@ -38,25 +46,16 @@ class Ui_MainWindow(object):
         
     def socketConnection(self):
         
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.s = serial.Serial(puerto)
+        self.s.timeout = 0.2
+        self.s.bauderate = 115200
         #Sensor 2
-        self.UDP_IP = "192.168.0.124"
-        self.UDP_IP_CLIENT = "192.168.0.151"
-        self.UDP_PORT_CLIENT = 2233
-        self.UDP_PORT = 10002
-        print("escuchando...", self.UDP_IP, self.UDP_PORT)
-        self.s.bind((self.UDP_IP, self.UDP_PORT))
         self.campoSensor1Creado = False
-
-        for i in range(3):            
-            time.sleep(2)
-            self.s.sendto(bytes('*','utf-8'), (self.UDP_IP_CLIENT, self.UDP_PORT_CLIENT))
-            #self.sc.send(('*').encode())
-            print("conecto")
         self.connectionRequest = False
         self.sensorConnectionStatus = True
         self.sqlDataBase()
+        self.s.write(bytes('*','UTF-8'))
+        time.sleep(0.01)
         
     def sqlDataBase(self):
         print('sql database')
@@ -64,16 +63,16 @@ class Ui_MainWindow(object):
         self.c = self.conn.cursor()
         # Create table
         self.c.execute('''CREATE TABLE IF NOT EXISTS sensorRigido
-                     (id text, data real, connectionStatus text)''')
+                     (id text, data real, connectionStatus text, old real, COP real)''')
         # Insert a row of data
-        for row in self.c.execute("SELECT * FROM sensorRigido WHERE 1"):
-            if row[0] == '1':
+        for row in self.c.execute("SELECT * FROM sensorRigido WHERE '%s'" % plataformaID):
+            if row[0] == plataformaID:
                 self.campoSensor1Creado = True
 
         if self.campoSensor1Creado == False:
             self.campoSensor1Creado = True
-            self.c.execute("INSERT INTO sensorRigido VALUES ('1','initValue sensor 1','True')")
-        self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
+            self.c.execute("INSERT INTO sensorRigido VALUES ('%s','initValue sensor 1','True', '%s', '%s' )" % (plataformaID, self.old,self.COP))
+        self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='%s'" % ('True',plataformaID))
         self.conn.commit()
         
     def desencriptarVector(self,vector):
@@ -94,7 +93,7 @@ class Ui_MainWindow(object):
                         if col == self.columnas:
                             col = 0;
                             fil = fil + 1;
-                            if fil > self.filas:
+                            if fil >= self.filas:
                                 return matriz;
                             matriz[fil][col] = 0;
                         col = col + 1;
@@ -111,67 +110,90 @@ class Ui_MainWindow(object):
     def recibeDatos(self):
 
         while True:
-            for row in self.c.execute("SELECT * FROM sensorRigido WHERE `id`='1'"):
+            for row in self.c.execute("SELECT * FROM sensorRigido WHERE `id`='%s'" % plataformaID):
                 if row[2] == 'True':
                     self.connectionRequest = True
                 else:
                     self.sensorConnectionStatus = False
                     self.connectionRequest = False
-                    #self.sc.close()
-                    self.s.close()
+                    #self.s.close()
                     print('cierra conexion')
-            if self.sensorConnectionStatus == True:
-                        
-                buf = self.s.recv(6000)
-                print(time.strftime("%H:%M:%S"))
-                
-                info = [buf[i:i+1] for i in range(0, len(buf), 1)]
-                #try:
-                for i in info:
-                    valorDecimal = int(binascii.hexlify(i),16)
+
+            
+            if self.sensorConnectionStatus == True:                
+                buf = self.readline(self.s, b'\r\n')
+                #buf = self.s.readline()
+                #print(buf)
+                if len(buf) > 5:
                     
-                    if self.iniciaTramaDeDatos == False:
-                      self.vectorDatosDistribucionPresion.append(valorDecimal)
+                    info = [buf[i:i+1] for i in range(0, len(buf), 1)]
+
+                    for i in info:
+                        valorDecimal = int(binascii.hexlify(i),16)
+                        
+                        self.vectorDatosDistribucionPresion.append(valorDecimal)
                       
-                      if valorDecimal == 255:
-                        self.primerByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 3]
-                        self.segundoByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 2]
-                        self.numeroBytes = self.primerByte*255 + self.segundoByte
+                        if len(self.vectorDatosDistribucionPresion) > 7:
 
-                        if(self.numeroBytes == len(self.vectorDatosDistribucionPresion) - 3):
+                            #protocolo: trama de datos + numero de datos en 2 bytes + 13 (retorno de carro CR) + 10 (Nueva linea LF)
+                            if self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  3] == 255 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  2] == 13 and self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) -  1] == 10:
+                                
+                                self.primerByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 5]
+                                self.segundoByte = self.vectorDatosDistribucionPresion[len(self.vectorDatosDistribucionPresion) - 4]
+                                self.numeroBytes = self.primerByte*255 + self.segundoByte
+                                
+                                #print(len(self.vectorDatosDistribucionPresion)-5, self.numeroBytes)
+                                if (len(self.vectorDatosDistribucionPresion)-5 != self.numeroBytes):
+                                    print("diferentes!!!!!!")
+                                    #print(buf)
+                                else:
+                                    #pass
+                                    #print(buf)
+                                    self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-6]
+                                    self.vectorDatosDistribucionPresion.append(255)
+                                    
+                                    self.vectorDesencriptado = self.desencriptarVector(self.vectorDatosDistribucionPresion)
+                                    self.dibujarDistribucionPresion(self.vectorDesencriptado)
+                                    self.vectorDatosDistribucionPresion = []
+                                    info = []
 
-                            self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-1]
-                            self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-1]
-                            self.vectorDatosDistribucionPresion=self.vectorDatosDistribucionPresion[:len(self.vectorDatosDistribucionPresion)-1]
-                            self.vectorDatosDistribucionPresion.append(255)
-                            self.vectorDesencriptado = self.desencriptarVector(self.vectorDatosDistribucionPresion)
-                            self.dibujarDistribucionPresion(self.vectorDesencriptado)
-                            self.vectorDatosDistribucionPresion = []
-                            info = []
-                            self.iniciaTramaDeDatos = False
-                            self.s.sendto(bytes('*','utf-8'), (self.UDP_IP_CLIENT, self.UDP_PORT_CLIENT))
-                            #self.sc.send(('*').encode())
-                            break
-                        else:
-                            self.vectorDatosDistribucionPresion = []
-                            info = []
-                            self.iniciaTramaDeDatos = False
-                            self.s.sendto(bytes('*','utf-8'), (self.UDP_IP_CLIENT, self.UDP_PORT_CLIENT))
-                            #self.sc.send(('*').encode())
-                            break
+                                #self.iniciaTramaDeDatos = False
+                                self.s.write(bytes('*','UTF-8'))
+                                time.sleep(0.01) 
 
-                    if valorDecimal == 255 and self.iniciaTramaDeDatos == False:
-                        self.s.sendto(bytes('*','utf-8'), (self.UDP_IP_CLIENT, self.UDP_PORT_CLIENT))
-                        #self.sc.send(('*').encode())
-                        self.iniciaTramaDeDatos = True
-                self.s.sendto(bytes('*','utf-8'), (self.UDP_IP_CLIENT, self.UDP_PORT_CLIENT))
-                #self.sc.send(('*').encode())
+
+                #if self.connectionRequest == True:
+                    #self.socketConnection()
+                #print("sensor desconectado")
+    def readline(self, a_serial, eol=b'\r\n'):
+        leneol = len(eol)
+        line = bytearray()
+        while True:
+            c = a_serial.readline()
+            if c:
+                line += c
+                if line[-leneol:] == eol:
+                    break
             else:
-                if self.connectionRequest == True:
-                    self.socketConnection()
-                print("sensor desconectado")
+                break
+        return bytes(line)             
         
     def dibujarDistribucionPresion(self, matrizDistribucion):
+      self.c.execute("SELECT * FROM sensorRigido")
+      row = self.c.fetchone()
+      old = row[4]
+#      try:
+#          old = open ('old.data','r')
+#      except:
+#          old = open('old.data','w')
+#          old.write(str(self.old))
+#          old.close()
+#          old = open('old.data','r')
+          
+      self.old = ast.literal_eval(old)
+#      old.close()
+#      old = open('old.data','w')
+      
 ##
       maximoValor = 0
       
@@ -185,21 +207,35 @@ class Ui_MainWindow(object):
             if matrizDistribucion[i][j] >= maximoValor:
                 maximoValor = matrizDistribucion[i][j]
 
-      
+      (px,py,ppres) = COP.calcularCOP(matrizDistribucion)
+      self.COP = [px,py,ppres]
+      print(self.COP)
+#      old = open('old.data','w')
+#      old.write(str(self.COP))
+#      old.close()
       data = scipy.ndimage.zoom(matrizDistribucion, 1)
-      print("inserta datos base de datos")
+      #print("inserta datos base de datos")
       #self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', `connectionStatus` = '%s' WHERE `id`='1'" % (matrizDistribucion,'True'))
-      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s' WHERE `id`='1'" % matrizDistribucion)
+      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', old = '%s',COP='%s' WHERE `id`='%s'" % (matrizDistribucion, self.old, self.COP, plataformaID))
       self.conn.commit()
 
     def conectarSensor(self):
         #try:
+            self.sensorConnectionStatus = True
             self.socketConnection()
             self.recibeDatos()
             #threading.Timer(0.01, self.recibeDatos()).start()
             print("conecta conecta")
         #except:
             #print("No conecta")
+
+    def stopCommunicacion(self):
+        pass
+        #self.sensorConnectionStatus = False
+
+    def startCommunicacion(self):
+        pass
+        #self.sensorConnectionStatus = True
 
 if __name__ == "__main__":
     import sys

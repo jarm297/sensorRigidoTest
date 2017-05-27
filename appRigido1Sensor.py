@@ -15,18 +15,16 @@ import matplotlib.cm as cm
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 import socket
-import sys
+import sys, struct
 import binascii
 import threading
 import numpy as np
-import socket
 import scipy.ndimage
-import sys, struct
 from pylab import *
 import time
 import sqlite3
 import ast
-import time
+#import recvPlataforma1
 ion()
 
 maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
@@ -82,6 +80,11 @@ class Ui_MainWindow(object):
         self.intensityAdjustment = 240
 
         self.contadorImagenes = 0
+        #self.instanciaSerial = recvPlataforma1.Ui_MainWindow()
+        #self.t = threading.Thread(target=self.instanciaSerial.conectarSensor)
+        #self.t.IsBackground = True;
+        #self.threadStarted = False
+        
         #plt.gca().invert_yaxis()
             
     def sqlDataBase(self):
@@ -91,7 +94,7 @@ class Ui_MainWindow(object):
 
         self.conn1 = sqlite3.connect('transmisionContinuaRigido.db', check_same_thread=False, timeout=10)
         self.c1 = self.conn1.cursor()
-        self.c1.execute('''CREATE TABLE IF NOT EXISTS sensorRigidoTransmision (id text, data1 real, hour real)''')
+        self.c1.execute('''CREATE TABLE IF NOT EXISTS sensorRigidoTransmision (id text, data1 real, hour real, COP)''')
         self.conn1.commit()
         
     def setupUi(self, MainWindow):
@@ -258,12 +261,12 @@ class Ui_MainWindow(object):
         self.graphicsView_2.setBackgroundBrush(brush)
         self.graphicsView_2.setObjectName("graphicsView_2")
 
-        self.label = QtWidgets.QLabel(self.centralWidget)
-        self.label.setGeometry(QtCore.QRect(760, 18, 270, 61))
-        self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap("/img/logoGIBIC.png"))
-        self.label.setScaledContents(True)
-        self.label.setObjectName("label")
+        self.icon_label = QtWidgets.QLabel(self.centralWidget)
+        self.icon_label.setGeometry(QtCore.QRect(760, 18, 270, 61))
+        self.icon_label.setText("")
+        self.icon_label.setPixmap(QtGui.QPixmap("logoGIBIC.png"))
+        self.icon_label.setScaledContents(True)
+        self.icon_label.setObjectName("icon_label")
 
         self.label_1 = QtWidgets.QLabel(self.centralWidget)
         self.label_1.setGeometry(QtCore.QRect(425, 10, 311, 71))
@@ -349,11 +352,11 @@ class Ui_MainWindow(object):
               datosSensor1 = row[1]
 
         matrizSensor2 = ast.literal_eval(datosSensor2)
-
+        COP = row[4]
         self.contadorImagenes = self.contadorImagenes + 1
         hora = time.strftime("%H:%M:%S")
         
-        self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s',  '%s', '%s')" % (self.contadorImagenes, matrizSensor2 , hora))
+        self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s', '%s', '%s','%s')" % (self.contadorImagenes, matrizSensor2 , hora, COP))
         self.conn1.commit()
 
         #rotate_imgMatriz1 = scipy.ndimage.rotate(matrizSensor1, 90)
@@ -365,20 +368,24 @@ class Ui_MainWindow(object):
 
         matrizCompleta = np.concatenate((matriz2espejo, matriz2espejo), axis=1)
         for i in range(48):
-            for j in range(96):
+            for j in range(48):
+                matrizCompleta[i][j] = matrizCompleta[i][j]*10
                 if matrizCompleta[i][j] > 200:
                     matrizCompleta[i][j] = self.intensityAdjustment
 
         if self.numberOfPlatforms == 1:
             data = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(data)
+            ##
+            ax.imshow(COP[1],COP[2],color = 'white',linewidth=3.0)
         elif self.numberOfPlatforms == 2:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
         elif self.numberOfPlatforms == 3:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
-        print("plot matriz")
+
+        #plt.savefig('/Users/FING156561/Desktop/figuraRigido.png', dpi=10)
       
     def conectarSensor(self):
 ##        try:
@@ -388,8 +395,8 @@ class Ui_MainWindow(object):
 
             try:
                 
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'True')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'True')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'True')
 
                 self.pushButton.setStyleSheet("background-color: green; border-style: outset; border-width: 1px; border-radius: 10px; border-color: beige; padding: 6px;")
 
@@ -402,11 +409,13 @@ class Ui_MainWindow(object):
             self.conn.commit()
 
             self.msg.exec_()
-
+            #if (self.threadStarted == False):
+                #self.threadStarted = True
+                #self.t.start()
         else:
             try:
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'False')
-                self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'False')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='1'" % 'False')
+                #self.c.execute("UPDATE `sensorRigido` SET `connectionStatus` = '%s' WHERE `id`='2'" % 'False')
 
                 self.sensorConectado = False
                 self.pushButton.setStyleSheet("background-color: red; border-style: outset; border-width: 1px; border-radius: 10px; border-color: beige; padding: 6px;")
@@ -414,7 +423,9 @@ class Ui_MainWindow(object):
             except:
                 pass    
             self.conn.commit()
+            self.instanciaSerial.stopCommunicacion()
             print("sensor desconectado")
+        
         threading.Timer(0.01, self.recibeDatos).start()              
 
 if __name__ == "__main__":
