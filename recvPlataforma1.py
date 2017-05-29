@@ -63,7 +63,7 @@ class Ui_MainWindow(object):
         self.c = self.conn.cursor()
         # Create table
         self.c.execute('''CREATE TABLE IF NOT EXISTS sensorRigido
-                     (id text, data real, connectionStatus text, old real, COP real)''')
+                     (id text, data real, connectionStatus text, oldCOP real, currentCOP real)''')
         # Insert a row of data
         for row in self.c.execute("SELECT * FROM sensorRigido WHERE '%s'" % plataformaID):
             if row[0] == plataformaID:
@@ -182,17 +182,7 @@ class Ui_MainWindow(object):
       self.c.execute("SELECT * FROM sensorRigido")
       row = self.c.fetchone()
       old = row[4]
-#      try:
-#          old = open ('old.data','r')
-#      except:
-#          old = open('old.data','w')
-#          old.write(str(self.old))
-#          old.close()
-#          old = open('old.data','r')
-          
       self.old = ast.literal_eval(old)
-#      old.close()
-#      old = open('old.data','w')
       
 ##
       maximoValor = 0
@@ -210,13 +200,10 @@ class Ui_MainWindow(object):
       (px,py,ppres) = COP.calcularCOP(matrizDistribucion)
       self.COP = [px,py,ppres]
       print(self.COP)
-#      old = open('old.data','w')
-#      old.write(str(self.COP))
-#      old.close()
       data = scipy.ndimage.zoom(matrizDistribucion, 1)
       #print("inserta datos base de datos")
       #self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', `connectionStatus` = '%s' WHERE `id`='1'" % (matrizDistribucion,'True'))
-      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', old = '%s',COP='%s' WHERE `id`='%s'" % (matrizDistribucion, self.old, self.COP, plataformaID))
+      self.c.execute("UPDATE `sensorRigido` SET `data`= '%s', oldCOP = '%s',currentCOP='%s' WHERE `id`='%s'" % (matrizDistribucion, self.old, self.COP, plataformaID))
       self.conn.commit()
 
     def conectarSensor(self):

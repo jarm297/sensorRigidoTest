@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-import socket
+#import socket
 import sys, struct
 import binascii
 import threading
@@ -352,13 +352,16 @@ class Ui_MainWindow(object):
               datosSensor1 = row[1]
 
         matrizSensor2 = ast.literal_eval(datosSensor2)
-        COP = row[4]
+        COP = ast.literal_eval(row[4])
+        old = ast.literal_eval(row[3])
+        #print(COP)
         self.contadorImagenes = self.contadorImagenes + 1
         hora = time.strftime("%H:%M:%S")
         
         self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s', '%s', '%s','%s')" % (self.contadorImagenes, matrizSensor2 , hora, COP))
         self.conn1.commit()
-
+        del COP[2]
+        del old[2]
         #rotate_imgMatriz1 = scipy.ndimage.rotate(matrizSensor1, 90)
         rotate_imgMatriz2 = scipy.ndimage.rotate(matrizSensor2, 180)
 
@@ -376,17 +379,13 @@ class Ui_MainWindow(object):
         if self.numberOfPlatforms == 1:
             data = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(data)
-            ##
-            ax.imshow(COP[1],COP[2],color = 'white',linewidth=3.0)
         elif self.numberOfPlatforms == 2:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
         elif self.numberOfPlatforms == 3:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
-
         #plt.savefig('/Users/FING156561/Desktop/figuraRigido.png', dpi=10)
-      
     def conectarSensor(self):
 ##        try:
         if(self.sensorConectado == False):
