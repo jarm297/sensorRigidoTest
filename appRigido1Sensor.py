@@ -35,9 +35,9 @@ class Ui_MainWindow(object):
         print("init")
         self.fig = plt.figure(facecolor='#222222',figsize=(9,9))
         self.fig.set_size_inches(9,9)
-        ax = plt.Axes(self.fig, [0., 0., 1., 1.])
-        ax.set_axis_off()
-        self.fig.add_axes(ax)
+        self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
+        self.ax.set_axis_off()
+        self.fig.add_axes(self.ax)
         self.fig.canvas.draw()
         #self.fig.canvas.toolbar.pack_forget()
         #plt.show(block=False)
@@ -46,6 +46,7 @@ class Ui_MainWindow(object):
         self.iniciaTramaDeDatos = False
         self.columnas = 48;
         self.filas = 48;
+        self. era = []
         axis = plt.gca()
         axis.get_xaxis().set_visible(False)
         axis.get_yaxis().set_visible(False)
@@ -56,22 +57,21 @@ class Ui_MainWindow(object):
         matrizCompleta = np.concatenate((matriz,matrizSensor2),axis=1)
         matrizCompleta[0][0] = 255
         plt.set_cmap('jet')
-        ax = plt.gca()
+        self.ax = plt.gca()
 
-        divider = make_axes_locatable(ax)
+        divider = make_axes_locatable(self.ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
 
-        self.cbar = self.fig.colorbar(ax.imshow(matriz), ticks=[5,125,250],cax=cax)
+        self.cbar = self.fig.colorbar(self.ax.imshow(matriz), ticks=[5,125,250],cax=cax)
         self.cbar.ax.set_yticklabels(['Baja','Medio','Alto'])
         self.cbar.ax.tick_params(labelcolor='w', labelsize=12)
         #divider = make_axes_locatable(plt.gca())
         #cax = divider.append_axes("right","5%",pad="3%")
         #plt.colorbar(plt.imshow(matrizCompleta),cax=cax)
         
-        self.initData = scipy.ndimage.zoom(matriz, 3)
+        
         #self.contour = plt.contour(data)
         
-        self.imagen = ax.imshow(self.initData, interpolation = 'nearest')
         self.contador = 0
         self.contour_axis = plt.gca()
         self.sensorConectado = False
@@ -84,7 +84,8 @@ class Ui_MainWindow(object):
         #self.t = threading.Thread(target=self.instanciaSerial.conectarSensor)
         #self.t.IsBackground = True;
         #self.threadStarted = False
-        
+        self.initData = scipy.ndimage.zoom(matriz, 3)
+        self.imagen = self.ax.imshow(self.initData, interpolation = 'nearest')
         #plt.gca().invert_yaxis()
             
     def sqlDataBase(self):
@@ -341,9 +342,9 @@ class Ui_MainWindow(object):
 
         
     def dibujarDistribucionPresion(self, matrizDistribucion):
-        figure(1)
-
-        plt.set_cmap('jet')
+#        figure(1)
+#
+#        plt.set_cmap('jet')
         #for row in self.c.execute("SELECT * FROM sensorRigido WHERE `id`='1'"):
         for row in self.c.execute("SELECT * FROM sensorRigido WHERE 1"):
           if row[0] == '1':
@@ -356,12 +357,19 @@ class Ui_MainWindow(object):
         old = ast.literal_eval(row[3])
         #print(COP)
         self.contadorImagenes = self.contadorImagenes + 1
-        hora = time.strftime("%H:%M:%S")
-        
-        self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s', '%s', '%s','%s')" % (self.contadorImagenes, matrizSensor2 , hora, COP))
-        self.conn1.commit()
+#        hora = time.strftime("%H:%M:%S")
+#        self.c1.execute("INSERT INTO sensorRigidoTransmision VALUES ('%s', '%s', '%s','%s')" % (self.contadorImagenes, matrizSensor2 , hora, COP))
+#        self.conn1.commit()
         del COP[2]
         del old[2]
+        for i in range (0,2):
+            if (old != [0, 0] and COP!=[0, 0]):
+                if i == 1:
+                    COP[i] = (47-COP[i])*3
+                    old[i] = (47-old[i])*3
+                else:
+                    COP[i] = (COP[i])*3
+                    old[i] = (old[i])*3
         #rotate_imgMatriz1 = scipy.ndimage.rotate(matrizSensor1, 90)
         rotate_imgMatriz2 = scipy.ndimage.rotate(matrizSensor2, 180)
 
@@ -381,11 +389,32 @@ class Ui_MainWindow(object):
             self.imagen.set_data(data)
         elif self.numberOfPlatforms == 2:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
+            
             self.imagen.set_data(dataDatosCompletos)
+            if (old != [0, 0] and COP!=[0, 0]):
+                self.era.append(self.ax.plot([old[1],COP[1]],[old[0],COP[0]],color = 'white', marker = 'o',linewidth=3.0))
+#                cy = COP[1] - old[1]
+#                cx = COP[0] - old[0]
+#                self.era.append(self.ax.arrow(old[1],old[0],cy,cx, head_width=2, head_length=2,
+#                          fc='w', ec='w'))
+                if (len(self.era)>1):
+                    self.ax.lines.pop(0)
+
+
+
         elif self.numberOfPlatforms == 3:
             dataDatosCompletos = scipy.ndimage.zoom(matriz2espejo, 5)
             self.imagen.set_data(dataDatosCompletos)
+        try:
+            if COP == [0,0]:
+                self.ax.lines.pop(0)
+                self.era = []
+        except:
+            pass
         #plt.savefig('/Users/FING156561/Desktop/figuraRigido.png', dpi=10)
+        figure(1)
+
+        plt.set_cmap('jet')
     def conectarSensor(self):
 ##        try:
         if(self.sensorConectado == False):
